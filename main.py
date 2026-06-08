@@ -11,18 +11,30 @@ def download():
     if not url:
         return jsonify({'error': 'URL do'}), 400
     try:
-        ydl_opts = {'quiet': True, 'noplaylist': True}
+        ydl_opts = {
+            'quiet': True,
+            'noplaylist': True,
+            'format': 'best[ext=mp4]/best',
+        }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             formats = []
             for f in info.get('formats', []):
-                if f.get('url') and f.get('ext') == 'mp4':
+                if f.get('url') and f.get('acodec') != 'none' and f.get('vcodec') != 'none':
                     formats.append({
-                        'quality': f.get('format_note', 'Video'),
+                        'quality': f.get('format_note', f.get('height', 'Video')),
                         'url': f.get('url'),
-                        'ext': 'mp4'
+                        'ext': f.get('ext', 'mp4')
                     })
-            return jsonify({'links': formats[-3:]})
+            if not formats:
+                for f in info.get('formats', []):
+                    if f.get('url'):
+                        formats.append({
+                            'quality': f.get('format_note', 'Video'),
+                            'url': f.get('url'),
+                            'ext': f.get('ext', 'mp4')
+                        })
+            return jsonify({'links': formats[-5:]})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
